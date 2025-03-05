@@ -183,24 +183,36 @@ def voxel_grid_to_mesh(voxel_grid, threshold=0.5, smooth=False):
         return mesh
     
     try:
+        # Create a padded copy of the voxel grid to ensure boundary constraints
+        # Add a single cell of padding with values below threshold to ensure boundaries are respected
+        padded_grid = np.pad(voxel_grid, 1, mode='constant', constant_values=0.0)
+        
+        # Reverse the voxel grid values - this is a workaround to force correct normal orientation
+        # When values are inverted (1.0 - value), marching cubes generates faces with opposite orientation
+        padded_grid = 1.0 - padded_grid
+        
         # Apply marching cubes algorithm to create a surface mesh
         # Make sure voxel data has values within a valid range for marching cubes
-        if np.max(voxel_grid) <= threshold or np.min(voxel_grid) > threshold:
-            print(f"Warning: Voxel grid values not appropriate for threshold {threshold}. Adjusting values.")
+        if np.max(padded_grid) <= (1.0 - threshold) or np.min(padded_grid) > (1.0 - threshold):
+            print(f"Warning: Inverted voxel grid values not appropriate for threshold {1.0 - threshold}. Adjusting values.")
             # Adjust voxel grid to ensure we have values on both sides of the threshold
-            if np.max(voxel_grid) <= threshold:
+            if np.max(padded_grid) <= (1.0 - threshold):
                 # Scale up the grid to ensure max values exceed threshold
-                scale_factor = (threshold + 0.1) / np.max(voxel_grid) if np.max(voxel_grid) > 0 else 1.0
-                voxel_grid = voxel_grid * scale_factor
-            if np.min(voxel_grid) > threshold:
+                scale_factor = ((1.0 - threshold) + 0.1) / np.max(padded_grid) if np.max(padded_grid) > 0 else 1.0
+                padded_grid = padded_grid * scale_factor
+            if np.min(padded_grid) > (1.0 - threshold):
                 # Add small offset to ensure some values below threshold
-                voxel_grid = voxel_grid - (np.min(voxel_grid) - threshold + 0.1)
-            
-        # Now run marching cubes with adjusted values
-        vertices, faces, normals, _ = measure.marching_cubes(voxel_grid, level=threshold)
+                padded_grid = padded_grid - (np.min(padded_grid) - (1.0 - threshold) + 0.1)
         
-        # Create a mesh
-        mesh = trimesh.Trimesh(vertices=vertices, faces=faces, normals=normals)
+        # Now run marching cubes with adjusted values
+        vertices, faces, normals, _ = measure.marching_cubes(padded_grid, level=(1.0 - threshold))
+        
+        # Adjust vertices to account for padding (subtract 1 from all coordinates)
+        vertices = vertices - 1.0
+        
+        # Create mesh with correct normal orientation due to inverted grid values
+        mesh = trimesh.Trimesh(vertices=vertices, faces=faces, process=True)
+        print("Using inverted values technique for correct normal orientation")
         
         # Smooth the mesh if requested
         if smooth:

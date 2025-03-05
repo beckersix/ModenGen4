@@ -91,16 +91,31 @@ class MeshProcessor:
         start_time = time.time()
         logger.info(f"Converting voxel grid to mesh with threshold {threshold}")
         
+        # Create a padded copy of the voxel grid to ensure boundary constraints
+        # Add a single cell of padding with values below threshold to ensure boundaries are respected
+        padded_grid = np.pad(voxel_grid, 1, mode='constant', constant_values=0.0)
+        
+        # Reverse the voxel grid values - this is a workaround to force correct normal orientation
+        # When values are inverted (1.0 - value), marching cubes generates faces with opposite orientation
+        padded_grid = 1.0 - padded_grid
+        
         # Apply marching cubes to get vertices and faces
         try:
-            vertices, faces, normals, _ = measure.marching_cubes(voxel_grid, level=threshold, method='lewiner')
+            vertices, faces, normals, _ = measure.marching_cubes(padded_grid, level=1.0 - threshold, method='lewiner')
         except Exception as e:
             logger.error(f"Marching cubes failed: {e}")
             # Fall back to basic method
-            vertices, faces, normals, _ = measure.marching_cubes(voxel_grid, level=threshold)
+            vertices, faces, normals, _ = measure.marching_cubes(padded_grid, level=1.0 - threshold)
         
-        # Create trimesh object
-        mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_normals=normals)
+        # Adjust vertices to account for padding (subtract 1 from all coordinates)
+        vertices = vertices - 1.0
+        
+        # Create trimesh object with a clean normal computation
+        mesh = trimesh.Trimesh(vertices=vertices, faces=faces, process=True)
+        
+        # When we invert the voxel grid, we explicitly set the winding order
+        # But we'll still double-check normals to be sure
+        logger.info("Using inverted values technique for correct normal orientation")
         
         # Apply smoothing if requested
         if smoothing is not None and smoothing > 0:
@@ -210,8 +225,32 @@ class MeshProcessor:
             logger.warning("Mesh is not watertight, attempting to fill holes")
             # In a real implementation, use more sophisticated hole filling
         
-        # Ensure outward-facing normals
-        mesh.fix_normals()
+        # Ensure outward-facing normals with more careful handling
+        try:
+            # First try using trimesh's built-in normal fixing
+            mesh.fix_normals()
+            
+            # Check if our heuristic suggests normals might be flipped
+            # (Here we assume that in most models, more faces should have normals 
+            # pointing away from the center than towards it)
+            center = mesh.centroid
+            face_centers = mesh.triangles_center
+            face_normals = mesh.face_normals
+            
+            # Determine direction of normals relative to center
+            direction_vectors = face_centers - center
+            alignment = np.sum(np.multiply(
+                direction_vectors, 
+                face_normals
+            ), axis=1)
+            
+            # If most normals point inward, flip all normals
+            if np.sum(alignment < 0) > np.sum(alignment > 0):
+                logger.info("Heuristic indicates normals may be inverted - flipping all normals")
+                mesh = self.flip_normals(mesh)
+        except Exception as e:
+            logger.warning(f"Error during normal orientation: {e}. Basic normal fixing applied.")
+            mesh.fix_normals()
         
         return mesh
     
@@ -255,6 +294,35 @@ class MeshProcessor:
         pcd.orient_normals_consistent_tangent_plane(k=k)
         
         return np.asarray(pcd.normals)
+    
+    def flip_normals(self, mesh):
+        """
+        Explicitly flip the normals of a mesh.
+        This can be used when the automatic normal orientation doesn't work.
+        
+        Args:
+            mesh: trimesh.Trimesh object
+            
+        Returns:
+            trimesh.Trimesh object with flipped normals
+        """
+        # Flip faces by reversing the order of vertices in each face
+        flipped_faces = np.copy(mesh.faces)
+        flipped_faces[:, [0, 2]] = flipped_faces[:, [2, 0]]  # Swap first and last vertex
+        
+        # Create new mesh with flipped normals
+        flipped_mesh = trimesh.Trimesh(
+            vertices=mesh.vertices,
+            faces=flipped_faces,
+            process=False
+        )
+        
+        # If mesh has UV coordinates, preserve them
+        if hasattr(mesh.visual, 'uv') and mesh.visual.uv is not None:
+            flipped_mesh.visual.uv = mesh.visual.uv
+            
+        logger.info("Mesh normals have been flipped")
+        return flipped_mesh
     
     def save_mesh(self, mesh, file_path, file_type=None):
         """Save mesh to a file."""

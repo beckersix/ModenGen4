@@ -455,6 +455,24 @@ function loadModel(modelUrl) {
             // Reset loading flag
             viewer.isLoadingModel = false;
             
+            // Fix material settings for all meshes in the model
+            object.traverse(function(child) {
+                if (child.isMesh) {
+                    // Create a new material or modify existing one to fix face culling
+                    if (child.material) {
+                        // Ensure proper side setting for face culling
+                        // THREE.FrontSide: only render front faces (default)
+                        // THREE.BackSide: only render back faces
+                        // THREE.DoubleSide: render both sides
+                        child.material.side = THREE.DoubleSide;
+                        
+                        // Set proper material properties
+                        child.material.flatShading = false;  // Smooth shading
+                        child.material.needsUpdate = true;
+                    }
+                }
+            });
+            
             // Center the model
             const box = new THREE.Box3().setFromObject(object);
             const center = box.getCenter(new THREE.Vector3());
