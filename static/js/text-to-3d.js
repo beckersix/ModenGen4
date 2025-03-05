@@ -1122,3 +1122,32 @@ window.addEventListener('load', function() {
         loadTrainedModels();
     }
 });
+    
+    // Start the animation loop
+    animationLoop();
+
+
+// End of file module initialization
+window.addEventListener('load', function() {
+    console.log("Window loaded");
+    
+    // Initialize if not already done
+    if (!initialized) {
+        initialized = true;
+        console.log("Initializing from window load event");
+        
+        // Initialize Three.js viewport
+        initializeViewport();
+        
+        // Only add default cube if viewport initialized successfully
+        if (viewer.scene) {
+            // Add default spinning cube to empty scene
+            addDefaultCube();
+        }
+        
+        // Initialize UI components and event handlers
+        setupEventListeners();
+        initializeHistoryPanel();
+        loadTrainedModels();
+    }
+});
