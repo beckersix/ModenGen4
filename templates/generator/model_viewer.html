@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/model-viewer.css' %}">
+<script src="{% static 'js/three.min.js' %}"></script>
+<script src="{% static 'js/OrbitControls.js' %}"></script>
+<script src="{% static 'js/OBJLoader.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container model-detail-container">
+    <div class="back-link">
+        <a href="{% url 'model_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Model List
+        </a>
+    </div>
+
+    <div class="model-header">
+        <h1 class="model-title">{{ prompt }}</h1>
+        <div class="model-meta">
+            <span class="model-id">ID: {{ model_id }}</span>
+            <span class="model-date">Created: {{ created_at|date:"F j, Y, g:i a" }}</span>
+            <span class="model-status badge badge-{{status}}">{{ status|title }}</span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">3D Model Preview</h5>
+                    <div class="model-actions">
+                        {% if mesh_url %}
+                        <a href="{{ mesh_url }}" class="btn btn-sm btn-outline-primary" download>
+                            <i class="fas fa-download"></i> Download OBJ
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="model-viewer" class="model-viewer-container">
+                        {% if status == 'completed' %}
+                        <div class="model-canvas-container">
+                            <canvas id="model-canvas"></canvas>
+                        </div>
+                        {% else %}
+                        <div class="model-loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                            <p class="mt-3">{{ status|title }}...</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Model Information</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Status
+                            <span class="badge badge-{{ status }}">{{ status|title }}</span>
+                        </li>
+                        {% if status == 'completed' %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Vertices
+                            <span>{{ vertex_count }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Faces
+                            <span>{{ face_count }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Generation Time
+                            <span>{{ generation_time|floatformat:2 }} seconds</span>
+                        </li>
+                        {% endif %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Created At
+                            <span>{{ created_at|date:"F j, Y, g:i a" }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Last Updated
+                            <span>{{ updated_at|date:"F j, Y, g:i a" }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Model Prompt</h5>
+                </div>
+                <div class="card-body">
+                    <p class="model-prompt-text">{{ prompt }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if status == 'completed' and mesh_url %}
+<script>
+    // Initialize Three.js viewer when the document is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        // Model URL
+        const modelUrl = "{{ mesh_url }}";
+        
+        // Set up the scene, camera, and renderer
+        const container = document.getElementById('model-canvas');
+        const width = container.clientWidth;
+        const height = container.clientHeight || 400;
+        
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf5f5f5);
+        
+        const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+        camera.position.z = 5;
+        
+        const renderer = new THREE.WebGLRenderer({ canvas: container, antialias: true });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        
+        // Add orbit controls for interaction
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.25;
+        
+        // Add lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 1.5);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(1, 1, 1);
+        scene.add(directionalLight);
+        
+        const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        backLight.position.set(-1, -1, -1);
+        scene.add(backLight);
+        
+        // Load the model
+        const loader = new THREE.OBJLoader();
+        loader.load(
+            modelUrl,
+            function(object) {
+                // Center the model
+                const box = new THREE.Box3().setFromObject(object);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scale = 2 / maxDim;
+                object.scale.set(scale, scale, scale);
+                
+                object.position.x = -center.x * scale;
+                object.position.y = -center.y * scale;
+                object.position.z = -center.z * scale;
+                
+                // Add to scene
+                scene.add(object);
+                
+                // Add a grid helper
+                const gridHelper = new THREE.GridHelper(2, 10, 0x888888, 0xcccccc);
+                scene.add(gridHelper);
+                
+                // Position camera to view the whole model
+                camera.position.z = 2;
+                camera.lookAt(0, 0, 0);
+                
+                // Update controls
+                controls.update();
+            },
+            function(xhr) {
+                console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+            },
+            function(error) {
+                console.error('Error loading model:', error);
+            }
+        );
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            const newWidth = container.clientWidth;
+            const newHeight = container.clientHeight || 400;
+            
+            camera.aspect = newWidth / newHeight;
+            camera.updateProjectionMatrix();
+            
+            renderer.setSize(newWidth, newHeight);
+        });
+    });
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,607 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI 3D Generator - Train Model{% endblock %}
+{% block nav_train %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+    .training-container {
+        border-radius: 0.5rem;
+        background-color: #f8f9fa;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .training-logs {
+        background-color: #212529;
+        color: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        font-family: monospace;
+        height: 300px;
+        overflow-y: auto;
+    }
+    
+    .parameter-card {
+        transition: transform 0.2s;
+    }
+    
+    .parameter-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .loader {
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 2s linear infinite;
+        margin: 0 auto;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .progress-container {
+        margin-top: 20px;
+    }
+    
+    .metrics-container {
+        margin-top: 20px;
+    }
+    
+    .metrics-chart {
+        width: 100%;
+        height: 300px;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+     
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-7">
+        <div class="training-container">
+            <h3 class="mb-3">Training Configuration</h3>
+            
+            <form id="training-form">
+                <div class="mb-3">
+                    <label for="model-type" class="form-label">Model Type</label>
+                    <select class="form-select" id="model-type">
+                        <option value="gan" selected>GAN (Generative Adversarial Network)</option>
+                        <option value="diffusion">Diffusion Model</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="training-data" class="form-label">Training Data</label>
+                    <select class="form-select" id="training-data">
+                        <option value="shapenet" selected>ShapeNet Dataset</option>
+                        <option value="custom">Custom Dataset</option>
+                    </select>
+                </div>
+                
+                <div id="custom-data-section" class="mb-3 d-none">
+                    <label for="custom-data-path" class="form-label">Custom Dataset Path</label>
+                    <input type="text" class="form-control" id="custom-data-path" placeholder="Path to your dataset">
+                </div>
+                
+                <h5 class="mt-4 mb-3">Hyperparameters</h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="batch-size" class="form-label">Batch Size</label>
+                            <input type="number" class="form-control" id="batch-size" value="32" min="1" max="128">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="learning-rate" class="form-label">Learning Rate</label>
+                            <input type="number" class="form-control" id="learning-rate" value="0.0002" step="0.0001" min="0.0001" max="0.01">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="num-epochs" class="form-label">Number of Epochs</label>
+                            <input type="number" class="form-control" id="num-epochs" value="100" min="1" max="1000">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="latent-dim" class="form-label">Latent Dimension</label>
+                            <input type="number" class="form-control" id="latent-dim" value="128" min="16" max="512">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="voxel-size" class="form-label">Voxel Resolution</label>
+                    <select class="form-select" id="voxel-size">
+                        <option value="32">32x32x32</option>
+                        <option value="64" selected>64x64x64</option>
+                        <option value="128">128x128x128</option>
+                    </select>
+                </div>
+                
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary" id="train-btn">
+                        <i class="fas fa-play me-2"></i> Start Training
+                    </button>
+                </div>
+            </form>
+            
+            <div id="training-status" class="mt-4 d-none">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title" id="status-title">Training in Progress...</h5>
+                        <div class="text-center py-3" id="status-loader">
+                            <div class="loader"></div>
+                        </div>
+                        <p class="card-text" id="status-message">
+                            Training has begun. This may take several hours depending on your configuration.
+                        </p>
+                        
+                        <div class="progress-container">
+                            <p><strong>Progress:</strong> <span id="progress-text">0%</span></p>
+                            <div class="progress">
+                                <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-5">
+        <div class="training-container h-100">
+            <h3 class="mb-3">Training Logs</h3>
+            <div class="training-logs" id="training-logs">
+                <!-- Training logs will appear here -->
+                <div id="log-content">Waiting for training to start...</div>
+            </div>
+            
+            <div class="metrics-container d-none" id="metrics-container">
+                <h3 class="mb-3 mt-4">Training Metrics</h3>
+                <div class="metrics-chart">
+                    <canvas id="metrics-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-12">
+        <h3 class="mb-3">Saved Models</h3>
+        
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Model Name</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Resolution</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="models-table-body">
+                    <!-- Models will be listed here -->
+                    <tr id="loading-row">
+                        <td colspan="6" class="text-center">Loading models...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Model data for the current training session
+        let currentTrainingModel = null;
+        let statusCheckInterval = null;
+        let metricsChart = null;
+        
+        // Show/hide custom data input based on selection
+        document.getElementById('training-data').addEventListener('change', function() {
+            const customSection = document.getElementById('custom-data-section');
+            if (this.value === 'custom') {
+                customSection.classList.remove('d-none');
+            } else {
+                customSection.classList.add('d-none');
+            }
+        });
+        
+        // Initialize by loading existing models
+        loadModels();
+        
+        // Handle form submission for training
+        document.getElementById('training-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            startTraining();
+        });
+        
+        // Function to start model training
+        function startTraining() {
+            // Get form values
+            const modelName = "Model_" + new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
+            const modelType = document.getElementById('model-type').value;
+            const dataset = document.getElementById('training-data').value;
+            const batchSize = parseInt(document.getElementById('batch-size').value);
+            const learningRate = parseFloat(document.getElementById('learning-rate').value);
+            const totalEpochs = parseInt(document.getElementById('num-epochs').value);
+            const latentDim = parseInt(document.getElementById('latent-dim').value);
+            const voxelSize = parseInt(document.getElementById('voxel-size').value);
+            
+            // Prepare request data
+            const trainingData = {
+                name: modelName,
+                model_type: modelType,
+                voxel_size: voxelSize,
+                latent_dim: latentDim,
+                batch_size: batchSize,
+                learning_rate: learningRate,
+                dataset: dataset,
+                total_epochs: totalEpochs
+            };
+            
+            // Show training status
+            document.getElementById('training-status').classList.remove('d-none');
+            document.getElementById('train-btn').disabled = true;
+            
+            // Clear logs
+            document.getElementById('log-content').innerHTML = 'Initializing training...\n';
+            
+            // Make API request to start training
+            fetch('/api/train/start/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(trainingData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.id) {
+                    currentTrainingModel = data;
+                    addLog(`Training started for model with ID: ${data.id}`);
+                    addLog(`Status: ${data.status}`);
+                    addLog(`Beginning epochs: ${totalEpochs}`);
+                    addLog(`Model parameters:\n- Type: ${modelType}\n- Resolution: ${voxelSize}x${voxelSize}x${voxelSize}\n- Latent dim: ${latentDim}\n- Batch size: ${batchSize}\n- Learning rate: ${learningRate}`);
+                    
+                    // Start checking status periodically
+                    statusCheckInterval = setInterval(checkTrainingStatus, 2000);
+                } else {
+                    addLog('Error starting training: ' + JSON.stringify(data));
+                    document.getElementById('train-btn').disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                addLog('Error starting training: ' + error.message);
+                document.getElementById('train-btn').disabled = false;
+            });
+        }
+        
+        // Function to check training status
+        function checkTrainingStatus() {
+            if (!currentTrainingModel || !currentTrainingModel.id) return;
+            
+            fetch(`/api/train/status/${currentTrainingModel.id}/`)
+                .then(response => response.json())
+                .then(data => {
+                    // Update progress information
+                    const progress = data.progress || 0;
+                    updateProgress(progress, data.current_epoch, data.total_epochs);
+                    
+                    // Update training metrics if available
+                    if (data.generator_loss && data.discriminator_loss) {
+                        document.getElementById('metrics-container').classList.remove('d-none');
+                        updateMetricsChart(data.generator_loss, data.discriminator_loss);
+                    }
+                    
+                    // Check if training is completed or failed
+                    if (data.status === 'completed' || data.status === 'failed') {
+                        clearInterval(statusCheckInterval);
+                        document.getElementById('train-btn').disabled = false;
+                        
+                        if (data.status === 'completed') {
+                            addLog(`Training completed successfully.`);
+                            addLog(`Training time: ${formatTime(data.training_time)}`);
+                            if (data.model_file) {
+                                addLog(`Model saved to: ${data.model_file}`);
+                            }
+                            
+                            // Update UI to show completed state
+                            document.getElementById('status-title').textContent = 'Training Completed';
+                            document.getElementById('status-loader').classList.add('d-none');
+                            document.getElementById('status-message').textContent = 'Your model has been successfully trained and is ready to use for generating 3D models.';
+                            
+                            // Reload models list
+                            loadModels();
+                        } else {
+                            addLog(`Training failed: ${data.error || 'Unknown error'}`);
+                            document.getElementById('status-title').textContent = 'Training Failed';
+                            document.getElementById('status-loader').classList.add('d-none');
+                            document.getElementById('status-message').textContent = 'Training failed. Please check the logs for more information.';
+                        }
+                    } else {
+                        addLog(`Epoch ${data.current_epoch}/${data.total_epochs}: Progress ${progress.toFixed(2)}%`);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking status:', error);
+                    addLog('Error checking training status: ' + error.message);
+                });
+        }
+        
+        // Function to update progress UI
+        function updateProgress(progress, currentEpoch, totalEpochs) {
+            document.getElementById('progress-text').textContent = `${progress.toFixed(2)}% (Epoch ${currentEpoch}/${totalEpochs})`;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+        }
+        
+        // Function to add log entry
+        function addLog(message) {
+            const logContent = document.getElementById('log-content');
+            const timestamp = new Date().toLocaleTimeString();
+            logContent.innerHTML += `[${timestamp}] ${message}\n`;
+            
+            // Auto-scroll to bottom
+            const logsContainer = document.getElementById('training-logs');
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+        
+        // Function to load existing models
+        function loadModels() {
+            fetch('/api/train/models/')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('models-table-body');
+                    // Clear loading row
+                    tableBody.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No models found</td></tr>';
+                        return;
+                    }
+                    
+                    // Add each model to the table
+                    data.forEach(model => {
+                        addModelToTable(model);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading models:', error);
+                    document.getElementById('models-table-body').innerHTML = 
+                        '<tr><td colspan="6" class="text-center text-danger">Error loading models</td></tr>';
+                });
+        }
+        
+        // Function to add a model to the table
+        function addModelToTable(model) {
+            const tableBody = document.getElementById('models-table-body');
+            const row = document.createElement('tr');
+            
+            // Format date
+            const createdDate = new Date(model.created_at);
+            const formattedDate = createdDate.toLocaleDateString() + ' ' + createdDate.toLocaleTimeString();
+            
+            // Default badge class based on status
+            let statusBadgeClass = 'badge bg-secondary';
+            if (model.status === 'completed') statusBadgeClass = 'badge bg-success';
+            if (model.status === 'training') statusBadgeClass = 'badge bg-primary';
+            if (model.status === 'failed') statusBadgeClass = 'badge bg-danger';
+            
+            // Create row content
+            row.innerHTML = `
+                <td>${model.name}${model.is_default ? ' <span class="badge bg-info">Default</span>' : ''}</td>
+                <td>${model.model_type}</td>
+                <td><span class="${statusBadgeClass}">${model.status}</span></td>
+                <td>${model.voxel_size}x${model.voxel_size}x${model.voxel_size}</td>
+                <td>${formattedDate}</td>
+                <td>
+                    ${model.status === 'completed' ? 
+                        `<button class="btn btn-sm btn-primary set-default-btn" data-model-id="${model.id}">Set as Default</button>` : ''}
+                    ${model.status === 'training' ? 
+                        `<button class="btn btn-sm btn-danger stop-training-btn" data-model-id="${model.id}">Stop Training</button>` : ''}
+                </td>
+            `;
+            
+            // Add event listeners for buttons
+            tableBody.appendChild(row);
+            
+            // Add click handler for "Set as Default" button
+            const defaultBtn = row.querySelector('.set-default-btn');
+            if (defaultBtn) {
+                defaultBtn.addEventListener('click', function() {
+                    setDefaultModel(model.id);
+                });
+            }
+            
+            // Add click handler for "Stop Training" button
+            const stopBtn = row.querySelector('.stop-training-btn');
+            if (stopBtn) {
+                stopBtn.addEventListener('click', function() {
+                    stopTraining(model.id);
+                });
+            }
+        }
+        
+        // Function to set a model as default
+        function setDefaultModel(modelId) {
+            fetch(`/api/train/set-default/${modelId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    // Show success message
+                    alert(data.message);
+                    // Reload models list
+                    loadModels();
+                } else {
+                    alert('Error setting default model: ' + JSON.stringify(data));
+                }
+            })
+            .catch(error => {
+                console.error('Error setting default model:', error);
+                alert('Error setting default model: ' + error.message);
+            });
+        }
+        
+        // Function to stop training
+        function stopTraining(modelId) {
+            if (!confirm('Are you sure you want to stop this training?')) return;
+            
+            fetch(`/api/train/stop/${modelId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    // Show success message
+                    alert(data.message);
+                    // Reload models list
+                    loadModels();
+                    
+                    // If this is the current model being trained, update UI
+                    if (currentTrainingModel && currentTrainingModel.id === modelId) {
+                        clearInterval(statusCheckInterval);
+                        document.getElementById('train-btn').disabled = false;
+                        document.getElementById('status-title').textContent = 'Training Stopped';
+                        document.getElementById('status-loader').classList.add('d-none');
+                        document.getElementById('status-message').textContent = 'Training has been manually stopped.';
+                    }
+                } else {
+                    alert('Error stopping training: ' + JSON.stringify(data));
+                }
+            })
+            .catch(error => {
+                console.error('Error stopping training:', error);
+                alert('Error stopping training: ' + error.message);
+            });
+        }
+        
+        // Initialize metrics chart
+        function initializeMetricsChart() {
+            const ctx = document.getElementById('metrics-chart').getContext('2d');
+            metricsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Generator Loss',
+                            data: [],
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Discriminator Loss',
+                            data: [],
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Training Loss'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Update metrics chart with new data
+        function updateMetricsChart(generatorLoss, discriminatorLoss) {
+            if (!metricsChart) {
+                initializeMetricsChart();
+            }
+            
+            // Update chart with new data
+            metricsChart.data.labels = generatorLoss.map(item => `Epoch ${item.epoch}`);
+            metricsChart.data.datasets[0].data = generatorLoss.map(item => item.loss);
+            metricsChart.data.datasets[1].data = discriminatorLoss.map(item => item.loss);
+            metricsChart.update();
+        }
+        
+        // Helper function to format time in seconds to human-readable format
+        function formatTime(seconds) {
+            if (!seconds) return '0s';
+            
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            
+            let result = '';
+            if (hours > 0) result += `${hours}h `;
+            if (minutes > 0) result += `${minutes}m `;
+            if (secs > 0 || result === '') result += `${secs}s`;
+            
+            return result;
+        }
+        
+        // Helper function to get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    });
+</script>
+{% endblock %}

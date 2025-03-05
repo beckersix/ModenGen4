@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>{% block title %}SIXSTUDIOS AI {% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% block extra_css %}{% endblock %}
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'home' %}">
+                <i class="fas fa-cube me-2"></i>
+                SIXSTUDIOS AI
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% block nav_home %}{% endblock %}" href="{% url 'home' %}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% block nav_models %}{% endblock %}" href="{% url 'model_list' %}">Gallery</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% block nav_train %}{% endblock %}" href="{% url 'train' %}">Model Trainer</a>
+                    </li>
+                </ul>
+                <div class="d-flex">
+                    <a href="#" class="btn btn-outline-light me-2" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                        <i class="fas fa-cog"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container-fluid my-4 flex-grow">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-dark text-white py-4 mt-auto">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>AI 3D Generator</h5>
+                    <p class="text-muted">
+                        Generate 3D models from text using AI
+                    </p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="mb-0">
+                        <small class="text-muted">
+                            &copy; {% now "Y" %} AI 3D Generator. All rights reserved.
+                        </small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Settings Modal -->
+    <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Settings</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs" id="settingsTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="general-tab" data-bs-toggle="tab" data-bs-target="#general" type="button" role="tab">General</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button" role="tab">System</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="advanced-tab" data-bs-toggle="tab" data-bs-target="#advanced" type="button" role="tab">Advanced</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content p-3" id="settingsTabContent">
+                        <div class="tab-pane fade show active" id="general" role="tabpanel">
+                            <h6>Application Settings</h6>
+                            <div class="mb-3">
+                                <label for="outputDir" class="form-label">Output Directory</label>
+                                <input type="text" class="form-control" id="outputDir" value="media/models">
+                            </div>
+                            <div class="mb-3">
+                                <label for="defaultDetailLevel" class="form-label">Default Detail Level (1-5)</label>
+                                <input type="range" class="form-range" min="1" max="5" id="defaultDetailLevel" value="3">
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="system" role="tabpanel">
+                            <h6>System Information</h6>
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div id="gpuInfo">Checking GPU status...</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="advanced" role="tabpanel">
+                            <h6>Advanced Settings</h6>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="enableExperimental">
+                                <label class="form-check-label" for="enableExperimental">Enable Experimental Features</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="saveSettings">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/examples/js/loaders/MTLLoader.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "basic_shapes": ["sphere", "cube", "cylinder", "cone", "torus", "plane"],
+  "sizes": ["small", "medium", "large"],
+  "textures": ["smooth", "rough", "bumpy"],
+  "colors": ["red", "green", "blue", "yellow", "white", "black", "purple", "orange", "gray", "brown"],
+  "features": [
+    "hollow", "solid", "sharp", "rounded", "flat", "curved", 
+    "symmetrical", "asymmetrical", "twisted", "bulging", "holes"
+  ],
+  "shape_weights": {
+    "sphere": [1.0, 0.2, 0.2, 0.3, 0.4, 0.1],
+    "cube": [0.2, 1.0, 0.3, 0.2, 0.1, 0.4],
+    "cylinder": [0.3, 0.3, 1.0, 0.4, 0.2, 0.2],
+    "cone": [0.4, 0.2, 0.4, 1.0, 0.3, 0.2],
+    "torus": [0.3, 0.1, 0.3, 0.3, 1.0, 0.4],
+    "plane": [0.1, 0.4, 0.2, 0.2, 0.4, 1.0]
+  },
+  "feature_vectors": {
+    "smooth": [0.9, 0.1, 0.0, 0.2, 0.4, 0.3],
+    "rough": [0.1, 0.8, 0.7, 0.4, 0.2, 0.1],
+    "hollow": [0.7, 0.3, 0.1, 0.2, 0.8, 0.3],
+    "solid": [0.3, 0.8, 0.6, 0.4, 0.2, 0.5],
+    "rounded": [0.8, 0.2, 0.1, 0.7, 0.5, 0.3],
+    "sharp": [0.2, 0.8, 0.7, 0.3, 0.1, 0.5]
+  }
+}

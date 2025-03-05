@@ -1,0 +1,39 @@
+{
+    "model_type": "voxel",
+    "output_dir": "media/gan_output",
+    "data_dir": "media/sample_data",
+    "log_level": "INFO",
+    "log_file": "gan_training.log",
+    "use_gpu": true,
+    "use_wandb": false,
+    "wandb_project": "3d-gan",
+    
+    "latent_dim": 100,
+    "voxel_dim": 64,
+    "num_points": 2048,
+    
+    "num_epochs": 100,
+    "batch_size": 16,
+    "lr_g": 0.0002,
+    "lr_d": 0.0002,
+    "beta1": 0.5,
+    "beta2": 0.999,
+    
+    "save_interval": 10,
+    "sample_interval": 5,
+    "num_workers": 4,
+    
+    "generator_config": {
+        "feat_dims": [512, 256, 128, 64, 32]
+    },
+    
+    "discriminator_config": {
+        "feat_dims": [32, 64, 128, 256, 512]
+    },
+    
+    "sample_data_config": {
+        "num_samples": 100,
+        "primitive_shapes": ["cube", "sphere", "cylinder", "cone", "torus", "pyramid"],
+        "variations_per_shape": 5
+    }
+}

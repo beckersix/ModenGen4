@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}SIXSTUDIOS - Text to 3D{% endblock %}
+{% block nav_text_to_3d %}active{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/text-to-3d.css' %}">
+{% endblock %}
+
+{% block extra_head %}
+<!-- Setting a permissive CSP to allow libraries and inline scripts -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net unpkg.com cdnjs.cloudflare.com threejs.org blob:; script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net unpkg.com cdnjs.cloudflare.com threejs.org blob:; style-src 'self' 'unsafe-inline' fonts.googleapis.com cdn.jsdelivr.net cdnjs.cloudflare.com; img-src 'self' data: blob:; font-src 'self' fonts.gstatic.com cdn.jsdelivr.net cdnjs.cloudflare.com; connect-src 'self' ws: wss: blob:; worker-src 'self' blob:; frame-src 'self';">
+
+<!-- ES Module Shims: Brings ES Module support to older browsers -->
+<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+<!-- Import map for Three.js modules -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.150.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.150.0/examples/jsm/"
+  }
+}
+</script>
+
+<!-- Load our main app script as a module -->
+<script type="module" src="{% static 'js/text-to-3d.js' %}"></script>
+
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="layout-container">
+        <!-- Left Column: Generation History -->
+        <div class="column left-column">
+            <div class="history-panel">
+                <div class="history-header">
+                    <h3>Library</h3>
+                    <div class="layout-toggle">
+                        <button class="layout-toggle-btn" data-layout="list" title="List View">
+                            <i class="fas fa-list"></i>
+                        </button>
+                        <button class="layout-toggle-btn" data-layout="grid-medium" title="Medium Grid">
+                            <i class="fas fa-th-large"></i>
+                        </button>
+                        <button class="layout-toggle-btn" data-layout="grid-small" title="Small Grid">
+                            <i class="fas fa-th"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="history-container" class="history-list">
+                    {% if recent_text_models %}
+                        {% for model in recent_text_models %}
+                        <div class="history-item" data-id="{{ model.id }}">
+                            <div class="history-item-preview">
+                                {% if model.texture_file %}
+                                <img src="{{ model.texture_file.url }}" alt="{{ model.prompt }}" style="max-height: 100%; width: auto;">
+                                {% else %}
+                                <i class="fas fa-cube fa-2x text-secondary"></i>
+                                {% endif %}
+                            </div>
+                            <div class="history-item-info">
+                                <div class="history-item-title" title="{{ model.prompt }}">{{ model.prompt|truncatechars:30 }}</div>
+                                <div class="history-item-date">{{ model.created_at|date:"M d, Y" }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center p-4">
+                            <p class="text-muted">No models generated yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Center Column: 3D Viewport -->
+        <div class="column center-column">
+            <div class="viewport-container">
+                <div id="model-viewer"></div>
+                <div class="viewport-overlay">
+                    <button class="viewport-btn" title="Reset Camera">
+                        <i class="fas fa-home"></i>
+                    </button>
+                    <button class="viewport-btn" title="Toggle Grid">
+                        <i class="fas fa-border-all"></i>
+                    </button>
+                    <button class="viewport-btn" title="Toggle Wireframe">
+                        <i class="fas fa-vector-square"></i>
+                    </button>
+                </div>
+                <div id="loading-indicator" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); padding: 20px; border-radius: 10px; color: white; text-align: center;">
+                    <div class="loader mb-3"></div>
+                    <div>Loading Model...</div>
+                </div>
+                <!-- Progress overlay will be added by JavaScript -->
+            </div>
+            
+            <!-- Prompt and Generate Button -->
+            <div class="center-prompt-container">
+                <div class="control-section">
+                    <form id="text-to-3d-form" class="d-flex">
+                        {% csrf_token %}
+                        <div class="flex-grow-1 me-2">
+                            <textarea class="form-control" id="text-prompt" rows="2" placeholder="Describe your 3D model (e.g., A small blue cube with rounded corners)"></textarea>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-primary h-100" id="generate-btn">
+                                <i class="fas fa-magic me-2"></i> Generate
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Column: Controls and Generation Form -->
+        <div class="column right-column">
+            <div class="control-panel">
+                <div class="control-section">
+                    <div class="control-section-header">Model Settings</div>
+                    
+                    <div class="mb-3">
+                        <label for="trained-model" class="form-label">Trained Model</label>
+                        <select class="form-select" id="trained-model">
+                            <option value="">Default Model</option>
+                            <!-- Trained models will be loaded here -->
+                        </select>
+                        <small class="text-muted">Choose a trained model for generation.</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="detail-level" class="form-label">Detail Level: <span id="detail-value">3</span></label>
+                        <input type="range" class="form-range" min="1" max="5" value="3" id="detail-level">
+                        <small class="text-muted">Higher detail levels will take longer to generate.</small>
+                    </div>
+                </div>
+                
+                <div class="control-section">
+                    <div class="control-section-header">Output Formats</div>
+                    
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="format-mesh" checked>
+                        <label class="form-check-label" for="format-mesh">Mesh (.obj)</label>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="format-point-cloud" checked>
+                        <label class="form-check-label" for="format-point-cloud">Point Cloud (.ply)</label>
+                    </div>
+                </div>
+                
+                <div id="generation-status" class="mt-4 d-none">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title" id="status-title">Generating your model...</h5>
+                            <div class="text-center py-3" id="status-loader">
+                                <div class="loader"></div>
+                            </div>
+                            <p class="card-text" id="status-message">
+                                This may take a few moments depending on the complexity of your request.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

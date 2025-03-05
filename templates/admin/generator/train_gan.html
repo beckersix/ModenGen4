@@ -1,0 +1,171 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <style>
+        .form-row {
+            margin-bottom: 15px;
+        }
+        .form-row label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-row .help-text {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 3px;
+        }
+        .form-row select,
+        .form-row input[type="number"] {
+            width: 100%;
+            max-width: 300px;
+            padding: 5px;
+        }
+        .gan-status {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+            display: none;
+        }
+        .progress-bar {
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-bar-inner {
+            height: 100%;
+            background-color: #79aec8;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Form validation
+            const form = document.getElementById('gan-training-form');
+            form.addEventListener('submit', function(e) {
+                const epochs = parseInt(document.getElementById('id_num_epochs').value);
+                const batchSize = parseInt(document.getElementById('id_batch_size').value);
+                
+                if (epochs <= 0 || isNaN(epochs)) {
+                    e.preventDefault();
+                    alert('Number of epochs must be a positive number');
+                    return false;
+                }
+                
+                if (batchSize <= 0 || isNaN(batchSize)) {
+                    e.preventDefault();
+                    alert('Batch size must be a positive number');
+                    return false;
+                }
+                
+                // Show a confirmation dialog for large epochs
+                if (epochs > 100) {
+                    if (!confirm('You are about to train for ' + epochs + ' epochs, which may take a long time. Are you sure you want to continue?')) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+                
+                // Show the status container
+                document.getElementById('gan-status').style.display = 'block';
+                
+                // Start polling for status
+                startStatusPolling();
+            });
+            
+            // Status polling
+            function startStatusPolling() {
+                const statusContainer = document.getElementById('gan-status-text');
+                const progressBar = document.getElementById('progress-bar-inner');
+                let progress = 0;
+                
+                function updateStatus() {
+                    fetch('{% url 'admin:train_gan_status' %}')
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'running') {
+                                statusContainer.textContent = 'GAN training is running. This may take some time...';
+                                progress += 1;
+                                progress = Math.min(progress, 99);
+                                progressBar.style.width = progress + '%';
+                                setTimeout(updateStatus, 2000);
+                            } else {
+                                statusContainer.textContent = 'GAN training has finished or is not running.';
+                                progressBar.style.width = '100%';
+                            }
+                        })
+                        .catch(error => {
+                            statusContainer.textContent = 'Error checking status: ' + error;
+                            setTimeout(updateStatus, 5000);
+                        });
+                }
+                
+                updateStatus();
+            }
+        });
+    </script>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <form id="gan-training-form" method="post">
+        {% csrf_token %}
+        
+        <fieldset class="module aligned">
+            <h2>3D GAN Training Configuration</h2>
+            
+            <div class="form-row">
+                <label for="id_model_type">Model Type:</label>
+                <select id="id_model_type" name="model_type">
+                    <option value="voxel" selected>Voxel-based (3D Grid)</option>
+                    <option value="pointcloud">Point Cloud-based</option>
+                </select>
+                <p class="help-text">Type of 3D representation to use for the GAN model</p>
+            </div>
+            
+            <div class="form-row">
+                <label for="id_num_epochs">Number of Epochs:</label>
+                <input type="number" id="id_num_epochs" name="num_epochs" value="100" min="1" max="1000">
+                <p class="help-text">Number of training epochs (each epoch processes the entire dataset once)</p>
+            </div>
+            
+            <div class="form-row">
+                <label for="id_batch_size">Batch Size:</label>
+                <input type="number" id="id_batch_size" name="batch_size" value="16" min="1" max="128">
+                <p class="help-text">Number of samples to process in each training batch</p>
+            </div>
+            
+            <div class="form-row">
+                <label for="id_generate_samples">Generate Sample Data:</label>
+                <input type="checkbox" id="id_generate_samples" name="generate_samples" checked>
+                <p class="help-text">Generate sample data before training if no data is available</p>
+            </div>
+            
+            <div class="form-row">
+                <label for="id_use_wandb">Use Weights & Biases for Logging:</label>
+                <input type="checkbox" id="id_use_wandb" name="use_wandb">
+                <p class="help-text">Enable logging to Weights & Biases for experiment tracking</p>
+            </div>
+        </fieldset>
+        
+        <div class="submit-row">
+            <input type="submit" value="Start Training" class="default" name="_start_training">
+        </div>
+        
+        <div id="gan-status" class="gan-status">
+            <h3>Training Status</h3>
+            <p id="gan-status-text">Starting GAN training...</p>
+            <div class="progress-bar">
+                <div id="progress-bar-inner" class="progress-bar-inner"></div>
+            </div>
+            <p class="help-text">Training will continue in the background even if you navigate away from this page.</p>
+        </div>
+    </form>
+</div>
+{% endblock %}

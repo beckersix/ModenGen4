@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI 3D Generator - Home{% endblock %}
+{% block nav_home %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Hero section with animated gradient background */
+    .hero {
+        background: linear-gradient(-45deg, #6e48aa, #9d50bb, #4287f5, #23d5ab);
+        background-size: 400% 400%;
+        animation: gradient 15s ease infinite;
+        color: white;
+        padding: 7rem 0;
+        margin-bottom: 3rem;
+        border-radius: 1rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+    
+    @keyframes gradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    
+    /* Floating 3D objects in hero background */
+    .hero-objects {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        opacity: 0.4;
+    }
+    
+    .hero-content {
+        position: relative;
+        z-index: 2;
+    }
+    
+    /* Card hover effects */
+    .model-card {
+        transition: all 0.3s ease-in-out;
+        border: none;
+        border-radius: 1rem;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+    
+    .model-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    }
+    
+    .model-preview {
+        height: 200px;
+        background-color: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0;
+    }
+    
+    /* Feature cards */
+    .feature-card {
+        padding: 2rem;
+        border-radius: 1rem;
+        background: white;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        height: 100%;
+        transition: all 0.3s ease;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .feature-icon {
+        width: 70px;
+        height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #6e48aa 0%, #9d50bb 100%);
+        color: white;
+        border-radius: 1rem;
+        margin-bottom: 1.5rem;
+        font-size: 1.8rem;
+    }
+    
+    /* Demo viewer */
+    #demo-model-container {
+        width: 100%;
+        height: 400px;
+        background-color: #f8f9fa;
+        border-radius: 1rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    
+    /* Buttons */
+    .btn-gradient {
+        background: linear-gradient(135deg, #6e48aa 0%, #9d50bb 100%);
+        color: white;
+        border: none;
+        padding: 0.8rem 2rem;
+        border-radius: 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-gradient:hover {
+        background: linear-gradient(135deg, #9d50bb 0%, #6e48aa 100%);
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        color: white;
+    }
+    
+    /* Section titles */
+    .section-title {
+        position: relative;
+        margin-bottom: 2.5rem;
+        font-weight: 700;
+    }
+    
+    .section-title:after {
+        content: "";
+        position: absolute;
+        left: 0;
+        bottom: -10px;
+        width: 50px;
+        height: 4px;
+        background: linear-gradient(135deg, #6e48aa 0%, #9d50bb 100%);
+        border-radius: 2px;
+    }
+    
+    /* Stats counter */
+    .stats-container {
+        background: white;
+        border-radius: 1rem;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        padding: 2rem;
+        margin-top: 3rem;
+        margin-bottom: 3rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #6e48aa;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        font-size: 1rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hero">
+    <div class="hero-objects" id="hero-canvas"></div>
+    <div class="container hero-content text-center">
+        <h1 class="display-4 fw-bold mb-4">Transform Text into 3D Reality</h1>
+        <p class="lead mb-5">Our cutting-edge AI turns your imagination into detailed 3D models within seconds</p>
+        <a href="{% url 'text_to_3d' %}" class="btn btn-gradient btn-lg">
+            <i class="fas fa-magic me-2"></i> Start Creating
+        </a>
+    </div>
+</div>
+
+<!-- Stats Counter -->
+<div class="container stats-container">
+    <div class="row">
+        <div class="col-md-3 stat-item">
+            <div class="stat-number" id="models-count">1,500+</div>
+            <div class="stat-label">Models Created</div>
+        </div>
+        <div class="col-md-3 stat-item">
+            <div class="stat-number">99%</div>
+            <div class="stat-label">Customer Satisfaction</div>
+        </div>
+        <div class="col-md-3 stat-item">
+            <div class="stat-number">10K+</div>
+            <div class="stat-label">Downloads</div>
+        </div>
+        <div class="col-md-3 stat-item">
+            <div class="stat-number">5</div>
+            <div class="stat-label">AI Models</div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="container mb-5">
+    <h2 class="section-title">How It Works</h2>
+    <div class="row g-4">
+        <div class="col-md-3">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-keyboard"></i>
+                </div>
+                <h4>Describe</h4>
+                <p>Enter a detailed description of the 3D model you want to create</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <h4>Process</h4>
+                <p>Our AI analyzes your text and understands the objects, shapes, and context</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-cubes"></i>
+                </div>
+                <h4>Generate</h4>
+                <p>The system creates a detailed 3D model with proper geometry and meshes</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-palette"></i>
+                </div>
+                <h4>Texture</h4>
+                <p>AI applies realistic textures and materials to complete your model</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Demo & Info Section -->
+<div class="container">
+    <div class="row mb-5 align-items-center">
+        <div class="col-md-6">
+            <h2 class="section-title">Create Anything You Imagine</h2>
+            <p class="mb-4">Our AI-powered system generates detailed 3D models from simple text descriptions. Perfect for:</p>
+            <ul class="list-group list-group-flush mb-4">
+                <li class="list-group-item border-0">
+                    <i class="fas fa-check-circle text-primary me-2"></i> Game development assets
+                </li>
+                <li class="list-group-item border-0">
+                    <i class="fas fa-check-circle text-primary me-2"></i> Product prototyping and visualization
+                </li>
+                <li class="list-group-item border-0">
+                    <i class="fas fa-check-circle text-primary me-2"></i> Educational materials and research
+                </li>
+                <li class="list-group-item border-0">
+                    <i class="fas fa-check-circle text-primary me-2"></i> AR/VR content creation
+                </li>
+            </ul>
+            <a href="{% url 'text_to_3d' %}" class="btn btn-gradient">
+                Try It Now
+            </a>
+        </div>
+        <div class="col-md-6">
+            <div id="demo-model-container">
+                <!-- 3D model viewer will be initialized here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if recent_models %}
+<div class="container mb-5">
+    <h2 class="section-title">Recently Generated Models</h2>
+    <div class="row row-cols-1 row-cols-md-4 g-4">
+        {% for model in recent_models %}
+        <div class="col">
+            <div class="card h-100 model-card">
+                <div class="model-preview">
+                    {% if model.texture_file %}
+                    <img src="{{ model.texture_file.url }}" class="card-img-top" alt="{{ model.prompt }}" style="max-height: 100%; width: auto;">
+                    {% else %}
+                    <i class="fas fa-cube fa-4x text-secondary"></i>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ model.prompt|truncatechars:30 }}</h5>
+                    <p class="card-text text-muted">
+                        <small>{{ model.created_at|date:"M d, Y" }}</small>
+                    </p>
+                    <a href="{% url 'model_detail' model.id %}" class="btn btn-sm btn-gradient">
+                        View Model
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="text-center mt-4">
+        <a href="{% url 'model_list' %}" class="btn btn-outline-primary">
+            View All Models
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

@@ -1,0 +1,12 @@
+{
+  "model_type": "gan",
+  "voxel_size": 128,
+  "latent_dim": 128,
+  "dataset": "shapenet",
+  "epochs": 1000,
+  "batch_size": 128,
+  "learning_rate": 0.0002,
+  "training_time": 505.42319774627686,
+  "created_at": "2025-03-05 08:46:14.552669+00:00",
+  "completed_at": "2025-03-05 08:54:46.951544+00:00"
+}
