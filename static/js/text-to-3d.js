@@ -950,7 +950,7 @@ function pollModelStatus(modelId) {
                         showProgress(false);
                         
                         // Refresh history panel to show the new model
-                        refreshHistoryPanel();
+                        refreshHistoryPanel(modelId, true);
                     }, 2000);
                     
                     return; // No need to continue polling
@@ -984,8 +984,10 @@ function pollModelStatus(modelId) {
 
 /**
  * Refresh the history panel
+ * @param {string} highlightNewModelId - Optional ID of a newly generated model to highlight and load
+ * @param {boolean} animate - Whether to animate new items in the history panel
  */
-function refreshHistoryPanel() {
+function refreshHistoryPanel(highlightNewModelId = null, animate = false) {
     console.log("Refreshing history panel...");
     
     // Hide generation status
@@ -1008,14 +1010,39 @@ function refreshHistoryPanel() {
             if (!historyContainer) return;
             
             if (data.models && data.models.length > 0) {
-                // Clear existing items
-                historyContainer.innerHTML = '';
+                // Get current model IDs in the DOM
+                const existingModelIds = Array.from(
+                    document.querySelectorAll('.history-item')
+                ).map(item => item.dataset.id);
                 
-                // Add new items
-                data.models.forEach(model => {
-                    const itemElement = createHistoryItem(model);
-                    historyContainer.appendChild(itemElement);
-                });
+                // Only add models that don't already exist in the DOM
+                if (highlightNewModelId && !existingModelIds.includes(highlightNewModelId)) {
+                    // Find the new model
+                    const newModel = data.models.find(model => model.id === highlightNewModelId);
+                    
+                    if (newModel) {
+                        // Create and add the new model item at the top
+                        const itemElement = createHistoryItem(newModel, true);
+                        
+                        // Add to the top of the list
+                        if (historyContainer.firstChild) {
+                            historyContainer.insertBefore(itemElement, historyContainer.firstChild);
+                        } else {
+                            historyContainer.appendChild(itemElement);
+                        }
+                        
+                        // Highlight and load the new model
+                        highlightHistoryItem(highlightNewModelId);
+                        loadModelById(highlightNewModelId);
+                    }
+                } else if (historyContainer.children.length === 0) {
+                    // If container is empty, populate all models
+                    historyContainer.innerHTML = '';
+                    data.models.forEach(model => {
+                        const itemElement = createHistoryItem(model);
+                        historyContainer.appendChild(itemElement);
+                    });
+                }
                 
                 // Re-attach event listeners
                 setupHistoryItemListeners();
@@ -1033,27 +1060,41 @@ function refreshHistoryPanel() {
 }
 
 /**
- * Create a history item element
+ * Create a history item DOM element
+ * @param {Object} model - Model data
+ * @param {boolean} isNew - Whether this is a newly generated model
+ * @returns {HTMLElement} - The created history item element
  */
-function createHistoryItem(model) {
+function createHistoryItem(model, isNew = false) {
     const div = document.createElement('div');
     div.className = 'history-item';
     div.dataset.id = model.id;
     
+    // Add "new" class for styling if this is a new model
+    if (isNew) {
+        div.classList.add('new-model');
+    }
+    
+    // Create preview with thumbnail if available
     let previewHtml = '';
-    if (model.texture_file) {
-        previewHtml = `<img src="${model.texture_file}" alt="${model.prompt}" style="max-height: 100%; width: auto;">`;
+    if (model.thumbnail_url) {
+        previewHtml = `<img src="${model.thumbnail_url}" alt="${model.prompt}" class="img-fluid thumbnail">`;
     } else {
         previewHtml = `<i class="fas fa-cube fa-2x text-secondary"></i>`;
     }
+    
+    // Use a safe prompt display (handle undefined or null prompts)
+    const promptText = model.prompt || 'Untitled Model';
+    const displayPrompt = promptText.length > 30 ? promptText.substring(0, 30) + '...' : promptText;
     
     div.innerHTML = `
         <div class="history-item-preview">
             ${previewHtml}
         </div>
         <div class="history-item-info">
-            <div class="history-item-title" title="${model.prompt}">${model.prompt.length > 30 ? model.prompt.substring(0, 30) + '...' : model.prompt}</div>
+            <div class="history-item-title" title="${promptText}">${displayPrompt}</div>
             <div class="history-item-date">${new Date(model.created_at).toLocaleDateString()}</div>
+            ${isNew ? '<div class="badge badge-success new-badge">New</div>' : ''}
         </div>
     `;
     
@@ -1097,35 +1138,6 @@ function animate() {
     // Start the animation loop
     animationLoop();
 }
-
-// End of file module initialization
-window.addEventListener('load', function() {
-    console.log("Window loaded");
-    
-    // Initialize if not already done
-    if (!initialized) {
-        initialized = true;
-        console.log("Initializing from window load event");
-        
-        // Initialize Three.js viewport
-        initializeViewport();
-        
-        // Only add default cube if viewport initialized successfully
-        if (viewer.scene) {
-            // Add default spinning cube to empty scene
-            addDefaultCube();
-        }
-        
-        // Initialize UI components and event handlers
-        setupEventListeners();
-        initializeHistoryPanel();
-        loadTrainedModels();
-    }
-});
-    
-    // Start the animation loop
-    animationLoop();
-
 
 // End of file module initialization
 window.addEventListener('load', function() {

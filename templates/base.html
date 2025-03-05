@@ -7,6 +7,8 @@
     <title>{% block title %}SIXSTUDIOS AI {% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/module-status.css">
+    <link rel="stylesheet" href="/static/css/history-panel-animations.css">
     {% block extra_css %}{% endblock %}
     {% block extra_head %}{% endblock %}
 </head>
@@ -32,7 +34,10 @@
                         <a class="nav-link {% block nav_train %}{% endblock %}" href="{% url 'train' %}">Model Trainer</a>
                     </li>
                 </ul>
-                <div class="d-flex">
+                <div class="d-flex align-items-center">
+                    <div id="module-status-container" class="me-3">
+                        <!-- Module status indicators will be injected here by JavaScript -->
+                    </div>
                     <a href="#" class="btn btn-outline-light me-2" data-bs-toggle="modal" data-bs-target="#settingsModal">
                         <i class="fas fa-cog"></i>
                     </a>
@@ -104,6 +109,25 @@
                                     <div id="gpuInfo">Checking GPU status...</div>
                                 </div>
                             </div>
+                            <div class="card mb-3">
+                                <div class="card-header">Module Status</div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <h6>GAN System</h6>
+                                            <div id="ganSystemStatus">Loading...</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h6>Language Processor</h6>
+                                            <div id="llmSystemStatus">Loading...</div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h6>Text to 3D Manager</h6>
+                                            <div id="textTo3dSystemStatus">Loading...</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="tab-pane fade" id="advanced" role="tabpanel">
                             <h6>Advanced Settings</h6>
@@ -127,6 +151,80 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/examples/js/loaders/OBJLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/examples/js/loaders/MTLLoader.js"></script>
+    <script src="/static/js/module-status.js"></script>
+    <script>
+        // Update system information in the settings modal
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update module status information in the settings modal when the modal is shown
+            const settingsModal = document.getElementById('settingsModal');
+            if (settingsModal) {
+                settingsModal.addEventListener('shown.bs.modal', function() {
+                    fetch('/api/module-status/')
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.modules) {
+                                // Update GAN System status
+                                const ganStatus = document.getElementById('ganSystemStatus');
+                                if (ganStatus && data.modules.gan) {
+                                    let html = `<span class="badge ${data.modules.gan.loaded ? 'bg-success' : 'bg-danger'}">
+                                                    ${data.modules.gan.loaded ? 'Loaded' : 'Not Loaded'}
+                                                </span>`;
+                                    
+                                    if (data.modules.gan.loaded && data.modules.gan.stats) {
+                                        html += '<ul class="list-unstyled mt-2 small">';
+                                        Object.entries(data.modules.gan.stats).forEach(([key, value]) => {
+                                            html += `<li><strong>${key}:</strong> ${value}</li>`;
+                                        });
+                                        html += '</ul>';
+                                    }
+                                    
+                                    ganStatus.innerHTML = html;
+                                }
+                                
+                                // Update Language Processor status
+                                const llmStatus = document.getElementById('llmSystemStatus');
+                                if (llmStatus && data.modules.llm) {
+                                    let html = `<span class="badge ${data.modules.llm.loaded ? 'bg-success' : 'bg-danger'}">
+                                                    ${data.modules.llm.loaded ? 'Loaded' : 'Not Loaded'}
+                                                </span>`;
+                                    
+                                    if (data.modules.llm.loaded && data.modules.llm.stats) {
+                                        html += '<ul class="list-unstyled mt-2 small">';
+                                        Object.entries(data.modules.llm.stats).forEach(([key, value]) => {
+                                            html += `<li><strong>${key}:</strong> ${value}</li>`;
+                                        });
+                                        html += '</ul>';
+                                    }
+                                    
+                                    llmStatus.innerHTML = html;
+                                }
+                                
+                                // Update Text to 3D Manager status
+                                const textTo3dStatus = document.getElementById('textTo3dSystemStatus');
+                                if (textTo3dStatus && data.modules.text_to_3d) {
+                                    let html = `<span class="badge ${data.modules.text_to_3d.loaded ? 'bg-success' : 'bg-danger'}">
+                                                    ${data.modules.text_to_3d.loaded ? 'Loaded' : 'Not Loaded'}
+                                                </span>`;
+                                    
+                                    if (data.modules.text_to_3d.loaded && data.modules.text_to_3d.stats) {
+                                        html += '<ul class="list-unstyled mt-2 small">';
+                                        Object.entries(data.modules.text_to_3d.stats).forEach(([key, value]) => {
+                                            html += `<li><strong>${key}:</strong> ${value}</li>`;
+                                        });
+                                        html += '</ul>';
+                                    }
+                                    
+                                    textTo3dStatus.innerHTML = html;
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching module status:', error);
+                        });
+                });
+            }
+        });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

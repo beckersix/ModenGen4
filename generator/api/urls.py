@@ -7,6 +7,7 @@ from rest_framework.routers import DefaultRouter
 from . import views
 from . import text_to_3d_views
 from . import train_views
+from . import module_status_views
 
 # Create a router for REST API
 router = DefaultRouter()
@@ -31,6 +32,7 @@ urlpatterns = [
     path('api/text-to-3d/available-models/', text_to_3d_views.list_available_models, name='list_available_models'),
     path('api/text-to-3d/model/<uuid:model_id>/', text_to_3d_views.model_detail, name='text_to_3d_model_detail'),
     path('api/text-to-3d/model/<uuid:model_id>/details/', text_to_3d_views.get_model_details, name='get_model_details'),
+    path('api/text-to-3d/history/', text_to_3d_views.get_model_history, name='get_model_history'),
     
     # Training API endpoints
     path('api/train/start/', train_views.start_training, name='start_training'),
@@ -38,4 +40,7 @@ urlpatterns = [
     path('api/train/stop/<uuid:model_id>/', train_views.stop_training, name='stop_training'),
     path('api/train/models/', train_views.list_trained_models, name='list_trained_models'),
     path('api/train/set-default/<uuid:model_id>/', train_views.set_default_model, name='set_default_model'),
+    
+    # Module status endpoint
+    path('api/module-status/', module_status_views.module_status, name='module_status'),
 ]

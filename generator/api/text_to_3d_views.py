@@ -359,6 +359,44 @@ def get_model_details(request, model_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+@api_view(['GET'])
+def get_model_history(request):
+    """
+    API view to get history of generated 3D models.
+    
+    Returns:
+        JSON response with the list of generated models
+    """
+    try:
+        # Get all models, ordered by creation date (newest first)
+        models = GeneratedModel.objects.all().order_by('-created_at')
+        
+        # Serialize the model data for the response
+        model_data = []
+        for model in models:
+            # Get the path to the thumbnail if it exists
+            thumbnail_url = None
+            if model.texture_file and os.path.exists(model.texture_file.path):
+                thumbnail_url = model.texture_file.url
+            
+            model_data.append({
+                'id': str(model.id),
+                'prompt': model.prompt,
+                'created_at': model.created_at.isoformat(),
+                'status': model.status,
+                'thumbnail_url': thumbnail_url
+            })
+        
+        return JsonResponse({
+            'models': model_data
+        })
+    except Exception as e:
+        logger.error(f"Error retrieving model history: {str(e)}")
+        return JsonResponse({
+            'error': 'Failed to retrieve model history',
+            'message': str(e)
+        }, status=500)
+
 from django.shortcuts import render, get_object_or_404
 
 def model_detail(request, model_id):

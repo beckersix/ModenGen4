@@ -1,0 +1,74 @@
+/* 
+ * Animated History Panel Styles
+ * Enhances the 3D model history panel with animations and visual indicators
+ */
+
+/* Animation for new history items */
+.history-item.new-model {
+    position: relative;
+    border-left: 3px solid #28a745;
+    box-shadow: 0 0 8px rgba(40, 167, 69, 0.2);
+}
+
+/* New badge styling */
+.new-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background-color: #28a745;
+    color: white;
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    animation: pulse 2s infinite;
+}
+
+/* Pulse animation for the new badge */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(40, 167, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
+}
+
+/* Enhance history item hover effects */
+.history-item {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.history-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Selected history item styling */
+.history-item.selected {
+    background-color: rgba(13, 110, 253, 0.1);
+    border-left: 3px solid #0d6efd;
+}
+
+/* Make sure new models are properly visible in both grid and list layouts */
+.history-grid-medium .new-model,
+.history-grid-small .new-model {
+    border-top: 3px solid #28a745 !important;
+    border-left: none !important;
+}
+
+/* Hide the new badge after some time */
+@media (prefers-reduced-motion: no-preference) {
+    .new-badge {
+        animation: fadeOut 8s forwards;
+        animation-delay: 5s;
+    }
+    
+    @keyframes fadeOut {
+        0% { opacity: 1; }
+        100% { opacity: 0; visibility: hidden; }
+    }
+}
