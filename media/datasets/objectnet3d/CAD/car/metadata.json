@@ -1,0 +1,9 @@
+{
+  "category_id": "car",
+  "category_name": "car",
+  "source": "ObjectNet3D (Error Fallback)",
+  "model_count": 3,
+  "downloaded_at": "2025-03-05T18:41:59.238378",
+  "error": "SampleDataGenerator.generate_samples() got an unexpected keyword argument 'shape_types'",
+  "note": "Error occurred during download. These are procedurally generated fallback models."
+}

@@ -1,0 +1,8 @@
+{
+  "category_id": "02828884",
+  "category_name": "bench",
+  "source": "sample_generator",
+  "model_count": 20,
+  "downloaded_at": "2025-03-05T17:33:34.071698",
+  "note": "These are procedurally generated samples for demonstration. For the real ShapeNet dataset, register at https://shapenet.org/"
+}

@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import ListView, DetailView, TemplateView
+from django.conf import settings
 from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
 from rest_framework import status, viewsets
@@ -9,9 +10,7 @@ import json
 import os
 import uuid
 import numpy as np
-
-from ..models.django_models import GeneratedModel, GenerationSetting
-from .serializers import GeneratedModelSerializer, GenerationSettingSerializer
+from pathlib import Path
 import logging
 import threading
 import time
@@ -20,7 +19,20 @@ from ..utils.mesh_processor import MeshProcessor
 from ..texture_generator import TextureGenerator
 import torch
 
+from ..models.django_models import GeneratedModel, GenerationSetting
+from .serializers import GeneratedModelSerializer, GenerationSettingSerializer
+import logging
+import threading
+import time
+from ..utils.dataset_manager import get_dataset_managers
+from django.core.cache import cache
+
 logger = logging.getLogger(__name__)
+
+# Global dataset managers
+MEDIA_ROOT = Path(settings.MEDIA_ROOT)
+dataset_base_dir = MEDIA_ROOT / "datasets"
+shapenet, objectnet3d, custom_datasets, combined_datasets = get_dataset_managers(dataset_base_dir)
 
 # Web views
 class HomeView(TemplateView):
@@ -84,7 +96,7 @@ class TextTo3DView(TemplateView):
         context['recent_text_models'] = GeneratedModel.objects.filter(
             status='completed', 
             prompt__isnull=False
-        ).order_by('-created_at')[:5]
+        ).order_by('-created_at')
         return context
     
 class TrainView(TemplateView):
@@ -95,6 +107,12 @@ class TrainView(TemplateView):
         context = super().get_context_data(**kwargs)
         # Add any context data needed for the training page
         return context
+
+def datasets_view(request):
+    """
+    View for managing datasets
+    """
+    return render(request, 'generator/datasets.html')
 
 # API views
 @api_view(['POST'])
@@ -222,3 +240,246 @@ class GenerationSettingViewSet(viewsets.ModelViewSet):
     """API viewset for generation settings."""
     queryset = GenerationSetting.objects.all()
     serializer_class = GenerationSettingSerializer
+
+# ShapeNet endpoints
+@api_view(['GET'])
+def get_shapenet_categories(request):
+    """
+    Get available ShapeNet categories with download status.
+    """
+    try:
+        categories = shapenet.get_available_categories()
+        return Response(categories)
+    except Exception as e:
+        logger.error(f"Error getting ShapeNet categories: {str(e)}")
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+def download_shapenet_category(request):
+    """
+    Download a specific ShapeNet category.
+    """
+    category_id = request.data.get('category_id')
+    if not category_id:
+        return Response({"error": "Category ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        result = shapenet.download_category(category_id)
+        return Response({"path": result, "success": True})
+    except Exception as e:
+        logger.error(f"Error downloading ShapeNet category: {str(e)}")
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def get_shapenet_download_status(request):
+    """
+    Get status of background ShapeNet downloads.
+    """
+    status_key = request.query_params.get('status_key')
+    if not status_key:
+        return Response({"error": "Status key is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    status_data = cache.get(status_key, {})
+    return Response(status_data)
+
+@api_view(['POST'])
+def download_all_shapenet(request):
+    """
+    Download all ShapeNet categories in background.
+    """
+    # Ensure the datasets directory exists
+    import os
+    from concurrent.futures import ThreadPoolExecutor
+    import threading
+    
+    os.makedirs('media/datasets', exist_ok=True)
+    
+    try:
+        # Import here to avoid circular imports
+        from generator.utils.dataset_manager import get_dataset_managers
+        shapenet_downloader, _, _ = get_dataset_managers('media/datasets')
+        
+        # Get all categories
+        categories = shapenet_downloader.get_available_categories()
+        category_ids = [cat['id'] for cat in categories if not cat.get('downloaded', False)]
+        
+        if not category_ids:
+            return Response({
+                'status': 'success', 
+                'message': 'All ShapeNet categories are already downloaded.'
+            })
+        
+        # Function to download in background
+        def download_all_categories():
+            for cat_id in category_ids:
+                try:
+                    shapenet_downloader.download_category(cat_id)
+                except Exception as e:
+                    print(f"Error downloading category {cat_id}: {str(e)}")
+        
+        # Start download in a separate thread
+        download_thread = threading.Thread(target=download_all_categories)
+        download_thread.daemon = True
+        download_thread.start()
+        
+        return Response({
+            'status': 'success',
+            'message': f'Started downloading {len(category_ids)} ShapeNet categories in the background.',
+            'total_categories': len(category_ids)
+        })
+        
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+
+@api_view(['GET'])
+def get_custom_datasets(request):
+    """
+    Get available custom datasets
+    """
+    # Implementation to return custom datasets
+    return Response({'datasets': []})
+
+@api_view(['GET'])
+def get_combined_datasets(request):
+    """
+    Get available combined datasets
+    """
+    # Implementation to return combined datasets
+    return Response({'datasets': []})
+
+@api_view(['GET'])
+def get_objectnet3d_categories(request):
+    """
+    Get available ObjectNet3D categories with download status.
+    """
+    try:
+        categories = objectnet3d.get_available_categories()
+        return Response(categories)
+    except Exception as e:
+        logger.error(f"Error getting ObjectNet3D categories: {str(e)}")
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+def download_objectnet3d_category(request):
+    """
+    Download a specific ObjectNet3D category.
+    """
+    category_id = request.data.get('category_id')
+    if not category_id:
+        return Response({"error": "Category ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        result = objectnet3d.download_category(category_id)
+        
+        # Check if the result indicates procedurally generated models
+        if isinstance(result, dict) and result.get('is_procedural', False):
+            return Response({
+                "path": result.get('path'),
+                "success": True,
+                "is_procedural": True,
+                "model_count": result.get('model_count', 0),
+                "message": "Could not download actual ObjectNet3D models. Using procedurally generated models as fallback.",
+                "note": result.get('note', '')
+            })
+        elif isinstance(result, str):
+            # Handle case where the function returns just a string path
+            return Response({
+                "path": result,
+                "success": True,
+                "message": "Successfully retrieved models"
+            })
+        else:
+            # New response format
+            return Response({
+                "path": result.get('path'),
+                "success": True,
+                "is_procedural": False,
+                "model_count": result.get('model_count', 0),
+                "message": "Successfully downloaded ObjectNet3D models"
+            })
+    except Exception as e:
+        logger.error(f"Error downloading ObjectNet3D category: {str(e)}")
+        return Response({
+            "error": str(e),
+            "message": "Failed to download category. Check server logs for details."
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+def download_objectnet3d_toolbox(request):
+    """
+    Download the ObjectNet3D toolbox.
+    """
+    try:
+        result = objectnet3d.download_toolbox()
+        return Response({"path": result, "success": True})
+    except Exception as e:
+        logger.error(f"Error downloading ObjectNet3D toolbox: {str(e)}")
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+def download_all_objectnet3d(request):
+    """
+    Download all ObjectNet3D categories in background.
+    """
+    try:
+        # Start background task to download all components
+        status_key = f"objectnet3d_batch_download_{int(time.time())}"
+        
+        def download_task():
+            progress = {}
+            components = ['cad_models', 'images', 'annotations', 'splits', 'toolbox']
+            total = len(components)
+            
+            for i, component in enumerate(components):
+                try:
+                    if component == 'cad_models':
+                        # This will download and extract all CAD models
+                        objectnet3d._download_cad_models()
+                    elif component == 'toolbox':
+                        objectnet3d.download_toolbox()
+                    else:
+                        objectnet3d.download_dataset_components(component)
+                    
+                    progress[component] = {"status": "completed"}
+                except Exception as e:
+                    progress[component] = {"status": "error", "message": str(e)}
+                
+                # Update global progress
+                cache.set(status_key, {
+                    "progress": progress,
+                    "completed": i + 1,
+                    "total": total,
+                    "percent": int(100 * (i + 1) / total)
+                }, timeout=3600)
+            
+            # Mark as completed
+            cache_data = cache.get(status_key, {})
+            cache_data["status"] = "completed"
+            cache.set(status_key, cache_data, timeout=3600)
+        
+        # Start in background
+        threading.Thread(target=download_task).start()
+        
+        return Response({
+            "status": "started",
+            "status_key": status_key,
+            "message": "Downloading ObjectNet3D dataset in background. This includes 3D models, images, annotations, and the toolbox."
+        })
+        
+    except Exception as e:
+        logger.error(f"Error initiating ObjectNet3D batch download: {str(e)}")
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def get_objectnet3d_download_status(request):
+    """
+    Get status of background ObjectNet3D downloads.
+    """
+    status_key = request.query_params.get('status_key')
+    if not status_key:
+        return Response({"error": "Status key is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    status_data = cache.get(status_key, {})
+    return Response(status_data)

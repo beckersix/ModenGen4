@@ -1,0 +1,8 @@
+{
+  "category_id": "bookshelf",
+  "category_name": "bookshelf",
+  "source": "ObjectNet3D",
+  "model_count": 20,
+  "downloaded_at": "2025-03-05T17:48:14.326990",
+  "note": "These are procedurally generated samples for demonstration. For the real ObjectNet3D dataset, visit http://cvgl.stanford.edu/projects/objectnet3d/"
+}

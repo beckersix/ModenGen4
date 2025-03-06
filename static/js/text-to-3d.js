@@ -618,8 +618,20 @@ function loadModelById(modelId) {
         })
         .catch(error => {
             console.error('Error fetching model details:', error);
+            
+            // Reset loading flag
+            viewer.isLoadingModel = false;
+            
+            // Hide loading indicator
             showLoading(false);
-            addDefaultCube(); // Show default cube on error
+            
+            // Show default cube on error
+            addDefaultCube();
+            
+            // Make sure animation is running
+            animate();
+            
+            alert('Error loading model: ' + error.message);
         });
 }
 
@@ -988,16 +1000,10 @@ function pollModelStatus(modelId) {
  * @param {boolean} animate - Whether to animate new items in the history panel
  */
 function refreshHistoryPanel(highlightNewModelId = null, animate = false) {
-    console.log("Refreshing history panel...");
+    console.log('Refreshing history panel...');
     
-    // Hide generation status
-    const generationStatus = document.getElementById('generation-status');
-    if (generationStatus) {
-        generationStatus.classList.add('d-none');
-    }
-    
-    // Fetch latest history instead of reloading the page
-    _fetch('/api/text-to-3d/history/')
+    // Fetch the model history from the API
+    fetch('/api/text-to-3d/history/')
         .then(response => {
             if (!response.ok) {
                 throw new Error('Network response was not ok');
@@ -1005,6 +1011,9 @@ function refreshHistoryPanel(highlightNewModelId = null, animate = false) {
             return response.json();
         })
         .then(data => {
+            // Log how many models we're getting from the API
+            console.log(`API returned ${data.models ? data.models.length : 0} models`);
+            
             // Update the history container with new items
             const historyContainer = document.getElementById('history-container');
             if (!historyContainer) return;
@@ -1014,8 +1023,9 @@ function refreshHistoryPanel(highlightNewModelId = null, animate = false) {
                 const existingModelIds = Array.from(
                     document.querySelectorAll('.history-item')
                 ).map(item => item.dataset.id);
+                console.log(`Currently displaying ${existingModelIds.length} models in DOM`);
                 
-                // Only add models that don't already exist in the DOM
+                // Handle case where we have a specific new model to highlight
                 if (highlightNewModelId && !existingModelIds.includes(highlightNewModelId)) {
                     // Find the new model
                     const newModel = data.models.find(model => model.id === highlightNewModelId);
@@ -1035,27 +1045,40 @@ function refreshHistoryPanel(highlightNewModelId = null, animate = false) {
                         highlightHistoryItem(highlightNewModelId);
                         loadModelById(highlightNewModelId);
                     }
-                } else if (historyContainer.children.length === 0) {
-                    // If container is empty, populate all models
+                } else {
+                    // Always display all models from API response
+                    // Clear the container and rebuild it with all models
                     historyContainer.innerHTML = '';
                     data.models.forEach(model => {
-                        const itemElement = createHistoryItem(model);
+                        // Check if this is our highlighted model
+                        const isHighlighted = model.id === highlightNewModelId;
+                        const itemElement = createHistoryItem(model, isHighlighted);
                         historyContainer.appendChild(itemElement);
                     });
+                    
+                    // If we have a model to highlight, make sure it's highlighted and loaded
+                    if (highlightNewModelId) {
+                        highlightHistoryItem(highlightNewModelId);
+                        loadModelById(highlightNewModelId);
+                    }
                 }
+                
+                // Count how many models we ended up displaying
+                console.log(`After refresh: ${historyContainer.querySelectorAll('.history-item').length} models in DOM`);
                 
                 // Re-attach event listeners
                 setupHistoryItemListeners();
             } else {
                 historyContainer.innerHTML = `
                     <div class="text-center p-4">
-                        <p class="text-muted">No models generated yet</p>
+                        <i class="fas fa-cube fa-3x mb-3 text-secondary"></i>
+                        <p>No models found. Generate your first model!</p>
                     </div>
                 `;
             }
         })
         .catch(error => {
-            console.error('Error refreshing history panel:', error);
+            console.error('Error fetching model history:', error);
         });
 }
 

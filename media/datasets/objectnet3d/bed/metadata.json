@@ -1,0 +1,8 @@
+{
+  "category_id": "bed",
+  "category_name": "bed",
+  "source": "ObjectNet3D",
+  "model_count": 20,
+  "downloaded_at": "2025-03-05T17:48:14.290344",
+  "note": "These are procedurally generated samples for demonstration. For the real ObjectNet3D dataset, visit http://cvgl.stanford.edu/projects/objectnet3d/"
+}

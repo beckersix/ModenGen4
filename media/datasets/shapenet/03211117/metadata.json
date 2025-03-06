@@ -1,0 +1,8 @@
+{
+  "category_id": "03211117",
+  "category_name": "display",
+  "source": "sample_generator",
+  "model_count": 20,
+  "downloaded_at": "2025-03-05T17:33:34.237009",
+  "note": "These are procedurally generated samples for demonstration. For the real ShapeNet dataset, register at https://shapenet.org/"
+}

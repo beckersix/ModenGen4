@@ -33,6 +33,14 @@
                     <li class="nav-item">
                         <a class="nav-link {% block nav_train %}{% endblock %}" href="{% url 'train' %}">Model Trainer</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% block nav_datasets %}{% endblock %}" href="{% url 'datasets' %}">Datasets</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/generator/multiview-images' %}active{% endif %}" href="{% url 'multiview_images' %}">
+                            <i class="fas fa-images me-2"></i>Multiview Generator
+                        </a>
+                    </li>
                 </ul>
                 <div class="d-flex align-items-center">
                     <div id="module-status-container" class="me-3">
@@ -50,25 +58,7 @@
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="bg-dark text-white py-4 mt-auto">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <h5>AI 3D Generator</h5>
-                    <p class="text-muted">
-                        Generate 3D models from text using AI
-                    </p>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <p class="mb-0">
-                        <small class="text-muted">
-                            &copy; {% now "Y" %} AI 3D Generator. All rights reserved.
-                        </small>
-                    </p>
-                </div>
-            </div>
-        </div>
-    </footer>
+    
 
     <!-- Settings Modal -->
     <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">

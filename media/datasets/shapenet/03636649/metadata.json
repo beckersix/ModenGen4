@@ -1,0 +1,8 @@
+{
+  "category_id": "03636649",
+  "category_name": "lamp",
+  "source": "sample_generator",
+  "model_count": 20,
+  "downloaded_at": "2025-03-05T17:33:34.285375",
+  "note": "These are procedurally generated samples for demonstration. For the real ShapeNet dataset, register at https://shapenet.org/"
+}

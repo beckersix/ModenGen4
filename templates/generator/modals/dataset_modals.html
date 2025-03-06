@@ -1,0 +1,61 @@
+<!-- Create Custom Dataset Modal -->
+<div class="modal fade" id="createCustomDatasetModal" tabindex="-1" aria-labelledby="createCustomDatasetModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createCustomDatasetModalLabel">Create Custom Dataset</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createCustomDatasetForm">
+                    <div class="mb-3">
+                        <label for="datasetName" class="form-label">Dataset Name</label>
+                        <input type="text" class="form-control" id="datasetName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="datasetDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="datasetDescription" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="datasetFiles" class="form-label">Upload Files</label>
+                        <input class="form-control" type="file" id="datasetFiles" multiple accept=".obj,.fbx,.stl">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="submit" form="createCustomDatasetForm" class="btn btn-primary">Create Dataset</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Combined Dataset Modal -->
+<div class="modal fade" id="createCombinedDatasetModal" tabindex="-1" aria-labelledby="createCombinedDatasetModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createCombinedDatasetModalLabel">Create Combined Dataset</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createCombinedDatasetForm">
+                    <div class="mb-3">
+                        <label for="combinedDatasetName" class="form-label">Dataset Name</label>
+                        <input type="text" class="form-control" id="combinedDatasetName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="sourceDatasets" class="form-label">Source Datasets</label>
+                        <select class="form-select" id="sourceDatasets" multiple required>
+                            <!-- Source datasets will be populated here -->
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="submit" form="createCombinedDatasetForm" class="btn btn-primary">Create Combined Dataset</button>
+            </div>
+        </div>
+    </div>
+</div>

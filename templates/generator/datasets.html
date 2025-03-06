@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI 3D Generator - Dataset Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dataset-container {
+        margin-top: 20px;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+
+    .dataset-card {
+        transition: transform 0.2s;
+    }
+
+    .dataset-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .dataset-actions {
+        margin-top: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">Dataset Management</h2>
+
+    <ul class="nav nav-tabs" id="datasetTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="shapenet-tab" data-bs-toggle="tab" data-bs-target="#shapenet" type="button">ShapeNet</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="objectnet3d-tab" data-bs-toggle="tab" data-bs-target="#objectnet3d" type="button">ObjectNet3D</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="custom-tab" data-bs-toggle="tab" data-bs-target="#custom" type="button">Custom Datasets</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="combined-tab" data-bs-toggle="tab" data-bs-target="#combined" type="button">Combined Datasets</button>
+        </li>
+    </ul>
+
+    <div class="tab-content dataset-container" id="datasetTabContent">
+        <!-- ShapeNet Tab -->
+        <div class="tab-pane fade show active" id="shapenet" role="tabpanel">
+            <h4>ShapeNet Datasets</h4>
+            <div class="mb-4">
+                <button class="btn btn-primary" id="download-all-shapenet">
+                    <i class="fas fa-download me-2"></i>Download Complete ShapeNet Library
+                </button>
+                <div id="shapenet-download-progress" class="mt-3 d-none">
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <small class="text-muted mt-1">Downloading ShapeNet library. This may take some time...</small>
+                </div>
+            </div>
+            <div class="row" id="shapenet-categories">
+                <!-- ShapeNet categories will be loaded here -->
+                <div class="col-12 text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ObjectNet3D Tab -->
+        <div class="tab-pane fade" id="objectnet3d" role="tabpanel">
+            <h4>ObjectNet3D Datasets</h4>
+            
+            <div id="objectnet3d-messages">
+                <!-- Messages will be displayed here -->
+            </div>
+            
+            <div class="alert alert-info mb-4">
+                <h5><i class="fas fa-info-circle"></i> About ObjectNet3D</h5>
+                <p>ObjectNet3D is a large-scale dataset with 100 categories, 90,127 images, and 201,888 objects in these images. 
+                   The dataset provides 44,147 3D objects and 201,888 2D-3D alignments in total.</p>
+                <p><strong>Note:</strong> If direct download of model files is unavailable, the system will procedurally generate placeholder 3D models. 
+                   These procedural models will be clearly marked in the interface.</p>
+            </div>
+            
+            <div class="mb-4">
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-primary me-2" id="download-all-objectnet3d">
+                        <i class="fas fa-download me-2"></i>Download Complete ObjectNet3D Dataset
+                    </button>
+                    <button class="btn btn-secondary me-2" id="download-objectnet3d-toolbox">
+                        <i class="fas fa-tools me-2"></i>Download MATLAB Toolbox
+                    </button>
+                    <button class="btn btn-outline-primary refresh-objectnet3d">
+                        <i class="fas fa-sync-alt me-1"></i> Refresh
+                    </button>
+                </div>
+                <div id="objectnet3d-download-progress" class="mt-3 d-none">
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted mt-1">Downloading ObjectNet3D components. This may take some time...</small>
+                        <small class="progress-detail mt-1"></small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row" id="objectnet3d-categories">
+                <!-- ObjectNet3D categories will be loaded here -->
+                <div class="col-12 text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Datasets Tab -->
+        <div class="tab-pane fade" id="custom" role="tabpanel">
+            <h4>Custom Datasets</h4>
+            <div class="mb-4">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCustomDatasetModal">
+                    <i class="fas fa-plus me-2"></i>Create New Dataset
+                </button>
+            </div>
+            <div class="row" id="custom-datasets">
+                <!-- Custom datasets will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Combined Datasets Tab -->
+        <div class="tab-pane fade" id="combined" role="tabpanel">
+            <h4>Combined Datasets</h4>
+            <div class="mb-4">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCombinedDatasetModal">
+                    <i class="fas fa-plus me-2"></i>Create New Combined Dataset
+                </button>
+            </div>
+            <div class="row" id="combined-datasets">
+                <!-- Combined datasets will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+{% include 'generator/modals/dataset_modals.html' %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{% static 'js/dataset_manager.js' %}"></script>
+{% endblock %}

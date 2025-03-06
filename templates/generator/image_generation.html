@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI 3D Generator - Multiview Image Generation{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Multiview Image Generation</h2>
+    <p class="lead">Generate multiple views of an object from a text prompt</p>
+    
+    <div class="row">
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Generate Images</h5>
+                </div>
+                <div class="card-body">
+                    <form id="image-generation-form">
+                        <div class="mb-3">
+                            <label for="prompt" class="form-label">Object Description</label>
+                            <textarea class="form-control" id="prompt" rows="3" 
+                                placeholder="Example: A modern blue office chair with wheels"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="numViews" class="form-label">Number of views: <span id="numViewsValue">8</span></label>
+                            <input type="range" class="form-range" id="numViews" min="4" max="16" step="4" value="8">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="seed" class="form-label">Random Seed (optional)</label>
+                            <input type="number" class="form-control" id="seed" placeholder="Leave blank for random">
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" id="generateBtn">
+                            <i class="fas fa-images me-2"></i>Generate Views
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-7">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Generated Images</h5>
+                </div>
+                <div class="card-body">
+                    <div id="generationStatus" class="alert alert-info d-none">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            <div>Generating images... This may take a few minutes.</div>
+                        </div>
+                    </div>
+                    
+                    <div id="errorMessage" class="alert alert-danger d-none"></div>
+                    
+                    <div id="generatedImagesContainer" class="row d-none">
+                        <!-- Images will be displayed here -->
+                    </div>
+                    
+                    <div id="noImagesMessage" class="text-center py-4">
+                        <i class="fas fa-image fa-3x mb-3 text-muted"></i>
+                        <p>No images generated yet. Use the form to create views of a 3D object.</p>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-3 d-none" id="imageControls">
+                        <button class="btn btn-outline-primary btn-sm" id="downloadAllBtn">
+                            <i class="fas fa-download me-2"></i>Download All
+                        </button>
+                        <button class="btn btn-primary btn-sm" id="proceedTo3DBtn">
+                            <i class="fas fa-cube me-2"></i>Proceed to 3D Generation
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update the number of views display when slider changes
+    $('#numViews').on('input', function() {
+        $('#numViewsValue').text($(this).val());
+    });
+    
+    // Handle form submission
+    $('#image-generation-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        const prompt = $('#prompt').val().trim();
+        const numViews = parseInt($('#numViews').val());
+        const seed = $('#seed').val() ? parseInt($('#seed').val()) : null;
+        
+        if (!prompt) {
+            showError('Please enter a description of the object');
+            return;
+        }
+        
+        // Show generation status
+        $('#noImagesMessage').addClass('d-none');
+        $('#generatedImagesContainer').addClass('d-none');
+        $('#errorMessage').addClass('d-none');
+        $('#generationStatus').removeClass('d-none');
+        $('#imageControls').addClass('d-none');
+        $('#generateBtn').prop('disabled', true);
+        
+        // Make API request
+        $.ajax({
+            url: '/api/generate-multiview',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                prompt: prompt,
+                num_views: numViews,
+                seed: seed
+            }),
+            success: function(response) {
+                $('#generationStatus').addClass('d-none');
+                $('#generateBtn').prop('disabled', false);
+                
+                displayGeneratedImages(response);
+            },
+            error: function(xhr) {
+                $('#generationStatus').addClass('d-none');
+                $('#generateBtn').prop('disabled', false);
+                
+                const errorMsg = xhr.responseJSON?.error || 'Failed to generate images';
+                showError(errorMsg);
+            }
+        });
+    });
+    
+    // Display generated images
+    function displayGeneratedImages(response) {
+        const container = $('#generatedImagesContainer');
+        container.empty();
+        
+        response.image_paths.forEach((path, index) => {
+            const angle = (index * (360 / response.num_views));
+            const colDiv = $('<div>').addClass('col-md-3 mb-3');
+            
+            const card = $('<div>').addClass('card h-100');
+            const img = $('<img>').addClass('card-img-top').attr('src', '/' + path);
+            const cardBody = $('<div>').addClass('card-body p-2');
+            const title = $('<p>').addClass('card-text text-center small').text(`View ${angle}°`);
+            
+            cardBody.append(title);
+            card.append(img, cardBody);
+            colDiv.append(card);
+            container.append(colDiv);
+        });
+        
+        // Show the container and controls
+        container.removeClass('d-none');
+        $('#imageControls').removeClass('d-none');
+        
+        // Set up controls
+        $('#downloadAllBtn').off('click').on('click', function() {
+            // TODO: Implement download functionality
+            alert('Download functionality will be implemented here');
+        });
+        
+        $('#proceedTo3DBtn').off('click').on('click', function() {
+            // Store generation data in session and redirect to 3D generation
+            sessionStorage.setItem('multiviewData', JSON.stringify(response));
+            window.location.href = '/generator/nerf-reconstruction';
+        });
+    }
+    
+    // Show error message
+    function showError(message) {
+        $('#errorMessage').text(message).removeClass('d-none');
+    }
+});
+</script>
+{% endblock %}

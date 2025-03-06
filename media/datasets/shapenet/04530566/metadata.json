@@ -1,0 +1,8 @@
+{
+  "category_id": "04530566",
+  "category_name": "vessel",
+  "source": "sample_generator",
+  "model_count": 20,
+  "downloaded_at": "2025-03-05T17:33:34.434319",
+  "note": "These are procedurally generated samples for demonstration. For the real ShapeNet dataset, register at https://shapenet.org/"
+}
