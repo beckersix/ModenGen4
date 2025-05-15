@@ -24,8 +24,13 @@ This project uses natural language processing and generative AI to create 3D mod
 	```
   	python -m venv venv
 	```
-   	.\venv\Scripts\activate - WINDOWS
-   	source venv/bin/activate - MAC
+	WINDOWS
+	```
+   	.\venv\Scripts\activate
+	```
+	MAC
+	```
+   	source venv/bin/activate 
  	```
 	```
    	pip install -r requirements.txt
