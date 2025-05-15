@@ -16,13 +16,32 @@ This project uses natural language processing and generative AI to create 3D mod
 ## Setup
 
 1. Install dependencies:
+   You may have to install venv for windows / mac
+
    ```
+   python -m venv venv
+ ```
+ ```
+
+
+   .\venv\Scripts\activate - WINDOWS
+   source venv/bin/activate - MAC
+ ```
+ ```
+
    pip install -r requirements.txt
+ ```
+ ```
+
+   python manage.py migrate
    ```
 
 2. Run the application:
    ```
-   python main.py
+   python manage.py runserver
+
+   Go to chrome and navigate to 127.0.0.1:8000
+
    ```
 
 ## Architecture
