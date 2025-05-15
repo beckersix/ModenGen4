@@ -17,14 +17,17 @@ This project uses natural language processing and generative AI to create 3D mod
 
 1. Install dependencies:
    You may have to install venv for windows / mac
+
  	```
 	pip install virtualenv
  	```
+	```
   	python -m venv venv
 	```
    	.\venv\Scripts\activate - WINDOWS
    	source venv/bin/activate - MAC
  	```
+	```
    	pip install -r requirements.txt
  	```
 
