@@ -20,16 +20,10 @@ This project uses natural language processing and generative AI to create 3D mod
  	```
 	pip install virtualenv
  	```
-
-   	```
   	python -m venv venv
-	```
-
 	```
    	.\venv\Scripts\activate - WINDOWS
    	source venv/bin/activate - MAC
- 	```
-
  	```
    	pip install -r requirements.txt
  	```
