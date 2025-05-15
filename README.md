@@ -10,7 +10,7 @@ This project uses natural language processing and generative AI to create 3D mod
 
 - Generate 3D point clouds from simple text descriptions
 - Detail and refine 3D models using Stable Diffusion
-- Convert point clouds to renderable meshes with UV coordinates
+- Convert point clouds to meshes with UV coordinates
 - Generate textures based on the same text prompts
 
 ## Setup
@@ -44,9 +44,9 @@ This project uses natural language processing and generative AI to create 3D mod
    ```
    python manage.py runserver
 
-   Go to chrome and navigate to 127.0.0.1:8000
-
    ```
+
+   Go to chrome and navigate to 127.0.0.1:8000
 
 ## Architecture
 
